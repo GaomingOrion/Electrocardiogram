@@ -91,6 +91,11 @@ def get_train(name2idx, idx2name):
     dd['wc'] = get_proption(dd, True)
     torch.save(dd, config.train_data)
 
+def set_train_wc():
+    dd = torch.load(config.train_data)
+    dd['wc'] = get_proption(dd, True)
+    torch.save(dd, config.train_data)
+
 
 def get_test():
     test_index = []
@@ -140,13 +145,14 @@ def get_groups():
     return groups, left
 
 if __name__ == '__main__':
-    print('开始处理训练数据集...')
-    name2idx = name2index(config.arrythmia)
-    idx2name = {idx: name for name, idx in name2idx.items()}
-    get_train(name2idx, idx2name)
-    print('处理完成！')
-    print('开始处理测试数据集...')
-    get_test()
-    print('处理完成！')
+    # print('开始处理训练数据集...')
+    # name2idx = name2index(config.arrythmia)
+    # idx2name = {idx: name for name, idx in name2idx.items()}
+    # get_train(name2idx, idx2name)
+    # print('处理完成！')
+    # print('开始处理测试数据集...')
+    # get_test()
+    # print('处理完成！')
+    set_train_wc()
 
 

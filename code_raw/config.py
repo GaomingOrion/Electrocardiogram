@@ -25,7 +25,7 @@ class Config:
     #最大训练多少个epoch
     max_epoch = 29
     #输入维度
-    input_dim = 8
+    input_dim = 10
     #目标的采样长度
     target_point_num = 2048
     #保存模型的文件夹

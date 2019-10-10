@@ -58,12 +58,12 @@ def qrs_detect(data_path, df=None):
 def load_data_x(file_path, train=True):
     df = pd.read_csv(file_path, sep=' ')
     # position embedding
-    # _, T, T0 = qrs_detect(file_path, df)
-    # base = np.arange(5000).reshape(-1, 1)
-    # pos_sin = np.sin(2 * np.pi * (base / T + T0))
-    # pos_cos = np.cos(2 * np.pi * (base / T + T0))
-    # data = np.concatenate([df.values / 100, pos_sin, pos_cos], axis=-1)
-    data = df.values
+    _, T, T0 = qrs_detect(file_path, df)
+    base = np.arange(5000).reshape(-1, 1)
+    pos_sin = np.sin(2 * np.pi * (base / T + T0))
+    pos_cos = np.cos(2 * np.pi * (base / T + T0))
+    data = np.concatenate([df.values / 100, pos_sin, pos_cos], axis=-1)
+    # data = df.values
     x = transform(data, train)
     return x
 
