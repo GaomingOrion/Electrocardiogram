@@ -31,24 +31,6 @@ def adjust_learning_rate(optimizer, lr):
     return lr
 
 
-def get_groups():
-    arrys = open(config.arrythmia, encoding='utf-8').read().rstrip().split()
-    groups = {'窦性': ['窦性心动过缓', '窦性心动过速', '窦性心律'],
-             'ECG': ['正常ECG', '临界ECG', '异常ECG'],
-             '电压': ['左心室肥大', '左心室高电压', 'QRS低电压'],
-             '心室率': ['快心室率', '慢心室率'],
-             'ST': ['T波改变', 'ST段改变', 'ST-T改变'],
-             '非特异性ST': ['非特异性T波异常', '非特异性ST段异常', '非特异性ST段与T波异常'],
-             '电轴': ['电轴左偏', '电轴右偏'],
-             '右束支': ['右束支传导阻滞', '完全性右束支传导阻滞', '不完全性右束支传导阻滞'],
-             '左束支': ['左束支传导阻滞', '完全性左束支传导阻滞', '左前分支传导阻滞']}
-    groups_set = set()
-    for group in groups.values():
-        for x in group:
-            groups_set.add(x)
-    solo = [x for x in arrys if x not in groups_set and x != '双分支传导阻滞']
-    return {'multi': groups, 'solo': solo}
-
 
 def offline_test(sub, ans):
     file1 = open(sub, encoding='utf-8').read().rstrip('\n').split('\n')
@@ -71,6 +53,7 @@ class WeightedMultilabel(nn.Module):
         super(WeightedMultilabel, self).__init__()
         self.keys = list(sorted(groups['multi'].keys()))
         self.output_index = [0]
+        self.solo = len(groups['solo']) != 0
         for k in self.keys:
             self.output_index.append(self.output_index[-1] + len(groups['multi'][k]) + 1)
 
@@ -80,25 +63,31 @@ class WeightedMultilabel(nn.Module):
             # weight = torch.tensor(weight / np.sum(weight), dtype=torch.float).to(device)
             self.multi_loss[k] = nn.CrossEntropyLoss()
 
-        solo_weight = 1 / np.log1p(np.array(count['solo']))
-        solo_weight = torch.tensor(solo_weight / np.sum(solo_weight), dtype=torch.float).to(device)
-        self.solo_loss = nn.BCEWithLogitsLoss(weight=solo_weight)
+        if self.solo:
+            solo_weight = 1 / np.log1p(np.array(count['solo']))
+            solo_weight = torch.tensor(solo_weight / np.sum(solo_weight), dtype=torch.float).to(device)
+            self.solo_loss = nn.BCEWithLogitsLoss(weight=solo_weight)
 
-        self.weights = [np.sum(count['multi'][k]) for k in self.keys]
-        self.weights.append(np.mean(count['solo']))
-        self.weights = 1 / np.log1p(self.weights)
-        self.weights = torch.tensor(self.weights / np.sum(self.weights), dtype=torch.float).to(device)
+            self.weights = [np.sum(count['multi'][k]) for k in self.keys]
+            self.weights.append(np.mean(count['solo']))
+            self.weights = 1 / np.log1p(self.weights)
+            self.weights = torch.tensor(self.weights / np.sum(self.weights), dtype=torch.float).to(device)
+        else:
+            self.weights = [np.sum(count['multi'][k]) for k in self.keys]
+            self.weights = 1 / np.log1p(self.weights)
+            self.weights = torch.tensor(self.weights / np.sum(self.weights), dtype=torch.float).to(device)
 
     def forward(self, outputs, targets_long, targets_float):
         loss = [self.multi_loss[k](outputs[:, self.output_index[i]:self.output_index[i+1]], targets_long[:, i]).unsqueeze(0)
                 for i, k in enumerate(self.keys)]
-        loss.append(self.solo_loss(outputs[:, self.output_index[-1]:], targets_float).unsqueeze(0))
+        if self.solo:
+            loss.append(self.solo_loss(outputs[:, self.output_index[-1]:], targets_float).unsqueeze(0))
         loss = torch.cat(loss)
         return (loss * self.weights).sum()
 
 
 if __name__ == '__main__':
-    groups = get_groups()
+    groups = config.groups
     dd = torch.load(config.train_data)
     count = dd['count']
     device = torch.device('cuda')

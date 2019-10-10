@@ -3,20 +3,22 @@ import os
 
 def get_groups(arrys):
     groups = {'窦性': ['窦性心动过缓', '窦性心动过速', '窦性心律'],
-             'ECG': ['正常ECG', '临界ECG', '异常ECG'],
-             '电压': ['左心室肥大', '左心室高电压', 'QRS低电压'],
-             '心室率': ['快心室率', '慢心室率'],
-             'ST': ['T波改变', 'ST段改变', 'ST-T改变'],
-             '非特异性ST': ['非特异性T波异常', '非特异性ST段异常', '非特异性ST段与T波异常'],
-             '电轴': ['电轴左偏', '电轴右偏'],
-             '右束支': ['右束支传导阻滞', '完全性右束支传导阻滞', '不完全性右束支传导阻滞'],
-             '左束支': ['左束支传导阻滞', '完全性左束支传导阻滞', '左前分支传导阻滞']}
+             # 'ECG': ['正常ECG', '临界ECG', '异常ECG'],
+             # '电压': ['左心室肥大', '左心室高电压', 'QRS低电压'],
+             # '心室率': ['快心室率', '慢心室率'],
+             # 'ST': ['T波改变', 'ST段改变', 'ST-T改变'],
+             # '非特异性ST': ['非特异性T波异常', '非特异性ST段异常', '非特异性ST段与T波异常'],
+             # '电轴': ['电轴左偏', '电轴右偏'],
+             # '右束支': ['右束支传导阻滞', '完全性右束支传导阻滞', '不完全性右束支传导阻滞'],
+             # '左束支': ['左束支传导阻滞', '完全性左束支传导阻滞', '左前分支传导阻滞']
+              }
     groups_set = set()
     for group in groups.values():
         for x in group:
             groups_set.add(x)
     # solo = [x for x in arrys if x not in groups_set and x != '双分支传导阻滞']
-    solo = [x for i, x in enumerate(arrys) if i <= 25 and x not in groups_set and x != '双分支传导阻滞']
+    # solo = [x for i, x in enumerate(arrys) if i <= 25 and x not in groups_set and x != '双分支传导阻滞']
+    solo = []
     return {'multi': groups, 'solo': solo}
 
 
@@ -49,6 +51,8 @@ class Config:
     num_classes = sum(len(v) + 1 for v in groups['multi'].values()) + len(groups['solo'])
     #最大训练多少个epoch
     max_epoch = 30
+    #
+    show_interval = 100
     #输入维度
     input_dim = 8
     #目标的采样长度

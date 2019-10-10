@@ -8,10 +8,11 @@ import torch
 import numpy as np
 import pandas as pd
 from sklearn.metrics import precision_score, recall_score
-from tensorboard_logger import Logger
+# from tensorboard_logger import Logger
 from torch import nn, optim
 from torch.utils.data import DataLoader
 import os, time
+from IPython import display
 import utils
 from dataset import ECGDataset
 import resnet
@@ -133,11 +134,14 @@ def train(mode='train', ckpt=None, resume=False):
     print("train_datasize", len(train_dataset), "val_datasize", len(val_dataset))
     # optimizer and loss
     optimizer = optim.Adam(model.parameters(), lr=config.lr)
-    groups = utils.get_groups()
+    groups = config.groups
     count = train_dataset.count
     criterion = utils.WeightedMultilabel(groups, count, device)
     # 模型保存文件夹
     model_save_dir = '%s/%s_%s' % (config.ckpt, config.model_name, time.strftime("%Y%m%d%H%M"))
+    if not os.path.exists(config.ckpt):
+        os.mkdir(config.ckpt)
+    os.mkdir(model_save_dir)
     best_f1 = -1
     lr = config.lr
     start_epoch = 1
@@ -151,22 +155,24 @@ def train(mode='train', ckpt=None, resume=False):
             stage = current_w['stage']
             model.load_state_dict(current_w['state_dict'])
             print("=> loaded checkpoint (epoch {})".format(start_epoch - 1))
-    logger = Logger(logdir=model_save_dir, flush_secs=2)
+    # logger = Logger(logdir=model_save_dir, flush_secs=2)
     # =========>开始训练<=========
     val_loss, val_p, val_r, val_f1 = val_epoch(model, criterion, val_dataloader)
     print('start training')
     print('val_loss:%.3e val_precision:%.4f val_recall:%.4f val_f1:%.4f \n' % (val_loss, val_p, val_r, val_f1))
     for epoch in range(start_epoch, config.max_epoch + 1):
         since = time.time()
-        train_loss, train_p, train_r, train_f1 = train_epoch(model, optimizer, criterion, train_dataloader, show_interval=50)
-        val_loss, val_p, val_r, val_f1 = val_epoch(model, criterion, val_dataloader)
+        train_loss, train_p, train_r, train_f1 = train_epoch(model, optimizer, criterion, train_dataloader, show_interval=config.show_interval)
+        val_loss, val_p, val_r, val_f1, pr_df = val_epoch(model, criterion, val_dataloader, simple_mode=False)
+        pr_df['arry'] = pr_df['arry'].map(val_dataset.idx2name)
         print('#epoch:%02d stage:%d time:%s' % (epoch, stage, utils.print_time_cost(since)))
         print('train_loss:%.3e train_precision:%.4f train_recall:%.4f train_f1:%.4f' % (train_loss, train_p, train_r, train_f1))
         print('val_loss:%.3e val_precision:%.4f val_recall:%.4f val_f1:%.4f \n' % (val_loss, val_p, val_r, val_f1))
-        logger.log_value('train_loss', train_loss, step=epoch)
-        logger.log_value('train_f1', train_f1, step=epoch)
-        logger.log_value('val_loss', val_loss, step=epoch)
-        logger.log_value('val_f1', val_f1, step=epoch)
+        display.display(pr_df)
+        # logger.log_value('train_loss', train_loss, step=epoch)
+        # logger.log_value('train_f1', train_f1, step=epoch)
+        # logger.log_value('val_loss', val_loss, step=epoch)
+        # logger.log_value('val_f1', val_f1, step=epoch)
         state = {"state_dict": model.state_dict(), "epoch": epoch, "loss": val_loss, 'f1': val_f1, 'lr': lr,
                  'stage': stage}
         torch.save(state, os.path.join(model_save_dir, 'e%i' % (epoch)))
@@ -193,7 +199,7 @@ def val(mode, ckpt):
           % (val_loss, val_p, val_r, val_f1,))
     pr_df['arry'] = pr_df['arry'].map(val_dataset.idx2name)
     pr_df.to_csv('../user_data/%s_f1.csv' % mode, encoding='gbk')
-    print(pr_df)
+    display.display(pr_df)
 
 
 def test():
