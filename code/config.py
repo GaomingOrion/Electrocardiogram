@@ -15,7 +15,8 @@ def get_groups(arrys):
     for group in groups.values():
         for x in group:
             groups_set.add(x)
-    solo = [x for x in arrys if x not in groups_set and x != '双分支传导阻滞']
+    # solo = [x for x in arrys if x not in groups_set and x != '双分支传导阻滞']
+    solo = [x for i, x in enumerate(arrys) if i <= 25 and x not in groups_set and x != '双分支传导阻滞']
     return {'multi': groups, 'solo': solo}
 
 
@@ -39,15 +40,15 @@ class Config:
     #样本数
     num_samples = 32142
     #训练的模型名称
-    model_name = 'resnet101'
+    model_name = 'resnet34'
     #在第几个epoch进行到下一个state,调整lr
     stage_epoch = [20, 25, 50]
     #训练时的batch大小
-    batch_size = 32
+    batch_size = 64
     #label的类别数
-    num_classes = 63
+    num_classes = sum(len(v) + 1 for v in groups['multi'].values()) + len(groups['solo'])
     #最大训练多少个epoch
-    max_epoch = 35
+    max_epoch = 30
     #输入维度
     input_dim = 8
     #目标的采样长度
@@ -57,7 +58,7 @@ class Config:
     #保存提交文件的文件夹
     sub_dir = '../prediction_result'
     #初始的学习率
-    lr = 1e-4
+    lr = 1e-3
     # 学习率衰减 lr/=lr_decay
     lr_decay = 10
 

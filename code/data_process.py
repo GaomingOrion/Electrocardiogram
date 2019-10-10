@@ -89,7 +89,7 @@ def get_count(groups, dd=None):
     for _, arrys in dd['file2idx'].items():
         for idx in arrys:
             cnt[dd['idx2name'][idx]] += 1
-    res = {'multi':{k: [cnt[arry] for arry in v] for k, v in groups['multi'].items()},
+    res = {'multi': {k: [cnt[arry] for arry in v] for k, v in groups['multi'].items()},
             'solo': [cnt[arry] for arry in groups['solo']]}
     return res
 
@@ -122,7 +122,7 @@ def get_train():
     train, val = split_data(file2idx)
     dd = {'train': train, 'val': val, 'idx2name': idx2name, 'file2idx': file2idx}
     # count
-    groups = utils.get_groups()
+    groups = config.groups
     dd['count'] = get_count(dd)
     # targets
     targets = generate_targets(groups, file2idx, name2idx)
@@ -130,6 +130,13 @@ def get_train():
 
     torch.save(dd, config.train_data)
 
+def set_train_targets():
+    dd = torch.load(config.train_data)
+    name2idx = {v: k for k, v in dd['idx2name'].items()}
+    groups = config.groups
+    dd['count'] = get_count(groups, dd)
+    dd['targets'] = generate_targets(groups, dd['file2idx'], name2idx)
+    torch.save(dd, config.train_data)
 
 def get_test():
     test_index = []
@@ -152,12 +159,7 @@ if __name__ == '__main__':
     # print('开始处理测试数据集...')
     # get_test()
     # print('处理完成！')
-    groups = utils.get_groups()
-    dd = torch.load(config.train_data)
-    file2idx = dd['file2idx']
-    idx2name = dd['idx2name']
-    name2idx = {v: k for k, v in idx2name.items()}
-    targets = generate_targets(groups, file2idx, name2idx)
+    set_train_targets()
     pass
 
 
