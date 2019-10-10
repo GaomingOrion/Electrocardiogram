@@ -44,6 +44,7 @@ def output2pred(outputs):
     for j, k in enumerate(groups['solo']):
         preds[:, name2idx[k]] = np.where(outputs[:, output_index[-1]+j] > 0, 1, 0)
     preds[:, 50] = np.where(preds[:, 19] + preds[:, 25] == 2, 1, 0)
+    # print(preds[:10, [config.name2idx[name] for name in groups['solo']]])
     return preds
 
 
@@ -114,7 +115,7 @@ def val_epoch(model, criterion, val_dataloader, simple_mode=True):
             precision_one = precision_score(ys[:, i], preds[:, i])
             f1_one = 2 * recall_one * precision_one / (recall_one + precision_one + 1e-8)
             df.append([i, true, pred_true, all_true, recall_one, precision_one, f1_one])
-        df = pd.DataFrame(df, columns=['arry', 'true', 'pred_true', 'all_true', 'recall', 'precision', 'f1'])
+        df = pd.DataFrame(df, columns=['arry', 'truth', 'pred', 'true', 'recall', 'precision', 'f1'])
         return val_loss, precision, recall, f1, df
 
 
@@ -190,7 +191,7 @@ def val(mode, ckpt):
     model.load_state_dict(torch.load(ckpt, map_location='cpu')['state_dict'])
     model = model.to(device)
     val_dataset = ECGDataset(data_path=config.train_data, mode=mode)
-    groups = utils.get_groups()
+    groups = config.groups
     count = val_dataset.count
     criterion = utils.WeightedMultilabel(groups, count, device)
     val_dataloader = DataLoader(val_dataset, batch_size=config.batch_size, num_workers=6)
@@ -249,5 +250,5 @@ if __name__ == '__main__':
     # train('all', '../user_data/ckpt/resnet34_201910100416/e28', True)
     # val('val', '../user_data/ckpt/resnet34_201910100416/e28')
     # test()
-    train('train')
+    train('train', ckpt='../user_data/ckpt/resnet34_201910101626/e23', resume=False)
     pass

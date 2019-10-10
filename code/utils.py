@@ -59,30 +59,28 @@ class WeightedMultilabel(nn.Module):
 
         self.multi_loss = {}
         for k in groups['multi']:
-            # weight = 1 / np.log1p(np.array(count['multi'][k] + [config.num_samples - sum(count['multi'][k])]))
+            # weight = 1 / np.sqrt(np.array(count['multi'][k] + [config.num_samples - sum(count['multi'][k])]))
             # weight = torch.tensor(weight / np.sum(weight), dtype=torch.float).to(device)
             self.multi_loss[k] = nn.CrossEntropyLoss()
 
         if self.solo:
-            solo_weight = 1 / np.log1p(np.array(count['solo']))
-            solo_weight = torch.tensor(solo_weight / np.sum(solo_weight), dtype=torch.float).to(device)
-            self.solo_loss = nn.BCEWithLogitsLoss(weight=solo_weight)
+            self.solo_loss = nn.BCEWithLogitsLoss(reduction='none')
 
-            self.weights = [np.sum(count['multi'][k]) for k in self.keys]
-            self.weights.append(np.mean(count['solo']))
-            self.weights = 1 / np.log1p(self.weights)
+            self.weights = [np.sum(count['multi'][k]) for k in self.keys] + count['solo']
+            self.weights = 1 / np.sqrt(self.weights)
             self.weights = torch.tensor(self.weights / np.sum(self.weights), dtype=torch.float).to(device)
         else:
             self.weights = [np.sum(count['multi'][k]) for k in self.keys]
-            self.weights = 1 / np.log1p(self.weights)
+            self.weights = 1 / np.sqrt(self.weights)
             self.weights = torch.tensor(self.weights / np.sum(self.weights), dtype=torch.float).to(device)
 
     def forward(self, outputs, targets_long, targets_float):
         loss = [self.multi_loss[k](outputs[:, self.output_index[i]:self.output_index[i+1]], targets_long[:, i]).unsqueeze(0)
                 for i, k in enumerate(self.keys)]
-        if self.solo:
-            loss.append(self.solo_loss(outputs[:, self.output_index[-1]:], targets_float).unsqueeze(0))
         loss = torch.cat(loss)
+        if self.solo:
+            loss = torch.cat([loss, self.solo_loss(outputs[:, self.output_index[-1]:], targets_float).mean(dim=0)])
+
         return (loss * self.weights).sum()
 
 
